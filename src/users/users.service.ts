@@ -42,4 +42,10 @@ export class UsersService {
       throw new InternalServerErrorException('Failed to create user');
     }
   }
+
+  async findByEmail(email: string): Promise<any> {
+    return this.prisma.user.findUnique({
+      where: { email },
+    });
+  }
 }
