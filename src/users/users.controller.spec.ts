@@ -17,6 +17,7 @@ describe('UsersController', () => {
           useValue: {
             createUser: jest.fn(),
             deleteUser: jest.fn(),
+            getUserById: jest.fn(),
           },
         },
       ],
@@ -85,6 +86,37 @@ describe('UsersController', () => {
         NotFoundException,
       );
       expect(service.deleteUser).toHaveBeenCalledWith(req.user.userId);
+    });
+  });
+
+  describe('getProfile', () => {
+    it('should return user profile successfully', async () => {
+      const req = { user: { userId: '123' } };
+      const mockUser = {
+        id: '123',
+        email: 'test@example.com',
+        createdAt: new Date(),
+      };
+
+      service.getUserById.mockResolvedValue(mockUser);
+
+      const result = await controller.getProfile(req);
+
+      expect(result).toEqual(mockUser);
+      expect(service.getUserById).toHaveBeenCalledWith(req.user.userId);
+    });
+
+    it('should throw NotFoundException if user does not exist', async () => {
+      const req = { user: { userId: '123' } };
+
+      service.getUserById.mockRejectedValue(
+        new NotFoundException('User not found'),
+      );
+
+      await expect(controller.getProfile(req)).rejects.toThrow(
+        NotFoundException,
+      );
+      expect(service.getUserById).toHaveBeenCalledWith(req.user.userId);
     });
   });
 });

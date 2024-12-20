@@ -146,4 +146,37 @@ describe('UsersService', () => {
       expect(prismaMock.user.delete).not.toHaveBeenCalled();
     });
   });
+
+  describe('getUserById', () => {
+    it('should return user data if user exists', async () => {
+      const userId = '123';
+      const mockUser = {
+        id: userId,
+        email: 'test@example.com',
+        createdAt: new Date(),
+      };
+
+      prismaMock.user.findUnique.mockResolvedValue(mockUser);
+
+      const result = await service.getUserById(userId);
+
+      expect(result).toEqual(mockUser);
+      expect(prismaMock.user.findUnique).toHaveBeenCalledWith({
+        where: { id: userId },
+      });
+    });
+
+    it('should throw NotFoundException if user does not exist', async () => {
+      const userId = '123';
+
+      prismaMock.user.findUnique.mockResolvedValue(null);
+
+      await expect(service.getUserById(userId)).rejects.toThrow(
+        NotFoundException,
+      );
+      expect(prismaMock.user.findUnique).toHaveBeenCalledWith({
+        where: { id: userId },
+      });
+    });
+  });
 });

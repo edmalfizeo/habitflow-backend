@@ -6,6 +6,7 @@ import {
   UseGuards,
   Delete,
   Req,
+  Get,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create_user.dto';
@@ -29,5 +30,12 @@ export class UsersController {
     const userId = req.user.userId;
     await this.usersService.deleteUser(userId);
     return { message: 'User deleted successfully' };
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('me')
+  async getProfile(@Req() req: any) {
+    const userId = req.user.userId; // Extraído do token JWT
+    return await this.usersService.getUserById(userId);
   }
 }
