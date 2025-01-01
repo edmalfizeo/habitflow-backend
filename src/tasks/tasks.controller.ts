@@ -1,4 +1,12 @@
-import { Controller, Post, Body, UseGuards, Req, Get } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  UseGuards,
+  Req,
+  Get,
+  Patch,
+} from '@nestjs/common';
 import { JwtAuthGuard } from '../common/guards/jwt/jwt.guard';
 import { TasksService } from './tasks.service';
 import { createTaskSchema } from './dto/create_task.dto';
@@ -32,5 +40,16 @@ export class TasksController {
     const taskId = req.params.id;
     const task = await this.tasksService.getTask(taskId, userId);
     return { task };
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch(':id')
+  async updateTask(@Req() req: any, @Body() body: any) {
+    const parsedData = createTaskSchema.parse(body);
+    const userId = req.user.userId;
+    const taskId = req.params.id;
+
+    const task = await this.tasksService.updateTask(taskId, parsedData, userId);
+    return { message: 'Task updated successfully', task };
   }
 }

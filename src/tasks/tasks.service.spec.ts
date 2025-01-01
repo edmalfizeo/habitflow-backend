@@ -14,6 +14,7 @@ describe('TasksService', () => {
       create: jest.Mock<any, any>;
       findMany: jest.Mock<any, any>;
       findFirst: jest.Mock<any, any>;
+      update: jest.Mock<any, any>;
     };
   };
 
@@ -23,6 +24,7 @@ describe('TasksService', () => {
         create: jest.fn(),
         findMany: jest.fn(),
         findFirst: jest.fn(),
+        update: jest.fn(),
       },
     };
 
@@ -143,6 +145,98 @@ describe('TasksService', () => {
       await expect(service.getTask(taskId, userId)).rejects.toThrow(
         InternalServerErrorException,
       );
+    });
+  });
+
+  describe('updateTask', () => {
+    it('should update a task successfully', async () => {
+      const userId = '123';
+      const taskId = 'task456';
+      const updateData = {
+        title: 'Updated Task',
+        description: 'Updated Description',
+        status: 'completed' as 'pending' | 'completed',
+        deadline: '2024-12-31T23:59:59Z',
+      };
+
+      const existingTask = {
+        id: taskId,
+        title: 'Old Task',
+        description: 'Old Description',
+        status: 'pending',
+        deadline: '2024-11-30T23:59:59Z',
+        userId,
+      };
+
+      prismaMock.task.findFirst.mockResolvedValue(existingTask);
+      prismaMock.task.update.mockResolvedValue({
+        ...existingTask,
+        ...updateData,
+      });
+
+      const result = await service.updateTask(taskId, updateData, userId);
+
+      expect(result).toEqual({ ...existingTask, ...updateData });
+      expect(prismaMock.task.findFirst).toHaveBeenCalledWith({
+        where: { id: taskId, userId },
+      });
+      expect(prismaMock.task.update).toHaveBeenCalledWith({
+        where: { id: taskId },
+        data: updateData,
+      });
+    });
+
+    it('should throw NotFoundException if task does not exist', async () => {
+      const userId = '123';
+      const taskId = 'task456';
+      const updateData = {
+        title: 'Updated Task',
+        description: 'Updated Description',
+        status: 'completed' as 'pending' | 'completed',
+        deadline: '2024-12-31T23:59:59Z',
+      };
+
+      prismaMock.task.findFirst.mockResolvedValue(null); // Simula que a tarefa não existe
+
+      await expect(
+        service.updateTask(taskId, updateData, userId),
+      ).rejects.toThrow(NotFoundException);
+
+      expect(prismaMock.task.findFirst).toHaveBeenCalledWith({
+        where: { id: taskId, userId },
+      });
+      expect(prismaMock.task.update).not.toHaveBeenCalled(); // Não deve chamar update se a tarefa não existe
+    });
+
+    it('should throw InternalServerErrorException if Prisma fails during update', async () => {
+      const userId = '123';
+      const taskId = 'task456';
+      const updateData = {
+        title: 'Updated Task',
+        description: 'Updated Description',
+        status: 'completed' as 'pending' | 'completed',
+        deadline: '2024-12-31T23:59:59Z',
+      };
+
+      prismaMock.task.findFirst.mockResolvedValue({
+        id: taskId,
+        title: 'Old Task',
+        description: 'Old Description',
+        status: 'pending',
+        deadline: '2024-11-30T23:59:59Z',
+        userId,
+      });
+
+      prismaMock.task.update.mockRejectedValue(new Error('Database error')); // Simula erro genérico no Prisma
+
+      await expect(
+        service.updateTask(taskId, updateData, userId),
+      ).rejects.toThrow(InternalServerErrorException);
+
+      expect(prismaMock.task.update).toHaveBeenCalledWith({
+        where: { id: taskId },
+        data: updateData,
+      });
     });
   });
 });

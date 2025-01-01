@@ -18,6 +18,7 @@ describe('TasksController', () => {
             create: jest.fn(),
             listAll: jest.fn(),
             getTask: jest.fn(),
+            updateTask: jest.fn(),
           },
         },
       ],
@@ -148,6 +149,102 @@ describe('TasksController', () => {
       await expect(controller.getTask(req)).rejects.toThrowError(
         'Database error',
       );
+    });
+  });
+
+  describe('updateTask', () => {
+    it('should update a task successfully', async () => {
+      const req = {
+        user: { userId: '123' },
+        params: { id: 'task456' },
+      };
+      const body = {
+        title: 'Updated Task',
+        description: 'Updated Description',
+        status: 'completed',
+        deadline: '2024-12-31T23:59:59Z',
+      };
+      const mockTask = {
+        id: 'task456',
+        ...body,
+        deadline: new Date(body.deadline),
+        userId: '123',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      service.updateTask.mockResolvedValue(mockTask);
+
+      const result = await controller.updateTask(req, body);
+
+      expect(result).toEqual({
+        message: 'Task updated successfully',
+        task: mockTask,
+      });
+      expect(service.updateTask).toHaveBeenCalledWith('task456', body, '123');
+    });
+
+    it('should throw BadRequestException if validation fails', async () => {
+      const req = {
+        user: { userId: '123' },
+        params: { id: 'task456' },
+      };
+      const invalidBody = {
+        title: '', // Título vazio, inválido segundo o esquema Zod
+        description: 'Updated Description',
+        status: 'completed',
+        deadline: 'invalid-date', // Data inválida
+      };
+
+      await expect(
+        controller.updateTask(req, invalidBody),
+      ).rejects.toThrowError(/Title is required|Invalid date format/);
+
+      expect(service.updateTask).not.toHaveBeenCalled(); // Não deve chamar o service
+    });
+
+    it('should throw NotFoundException if task is not found (not happy path)', async () => {
+      const req = {
+        user: { userId: '123' },
+        params: { id: 'task456' },
+      };
+      const body = {
+        title: 'Updated Task',
+        description: 'Updated Description',
+        status: 'completed',
+        deadline: '2024-12-31T23:59:59Z',
+      };
+
+      service.updateTask.mockRejectedValue(
+        new NotFoundException('Task not found'),
+      );
+
+      await expect(controller.updateTask(req, body)).rejects.toThrow(
+        NotFoundException,
+      );
+
+      expect(service.updateTask).toHaveBeenCalledWith('task456', body, '123');
+    });
+
+    it('should throw InternalServerErrorException for generic errors (not happy path)', async () => {
+      const req = {
+        user: { userId: '123' },
+        params: { id: 'task456' },
+      };
+      const body = {
+        title: 'Updated Task',
+        description: 'Updated Description',
+        status: 'completed',
+        deadline: '2024-12-31T23:59:59Z',
+      };
+
+      service.updateTask.mockRejectedValue(new Error('Database error'));
+
+      await expect(controller.updateTask(req, body)).rejects.toThrowError(
+        'Database error',
+      );
+
+      expect(service.updateTask).toHaveBeenCalledWith('task456', body, '123');
     });
   });
 });
