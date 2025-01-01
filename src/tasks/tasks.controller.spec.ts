@@ -2,7 +2,10 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { TasksController } from './tasks.controller';
 import { TasksService } from './tasks.service';
 import { createTaskSchema } from './dto/create_task.dto';
-import { NotFoundException } from '@nestjs/common';
+import {
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 
 describe('TasksController', () => {
   let controller: TasksController;
@@ -19,6 +22,7 @@ describe('TasksController', () => {
             listAll: jest.fn(),
             getTask: jest.fn(),
             updateTask: jest.fn(),
+            deleteTask: jest.fn(),
           },
         },
       ],
@@ -245,6 +249,47 @@ describe('TasksController', () => {
       );
 
       expect(service.updateTask).toHaveBeenCalledWith('task456', body, '123');
+    });
+  });
+
+  describe('deleteTask', () => {
+    it('should delete a task successfully (happy path)', async () => {
+      const req = { user: { userId: '123' }, params: { id: 'task456' } };
+
+      service.deleteTask.mockResolvedValue(undefined);
+
+      const result = await controller.deleteTask(req);
+
+      expect(result).toEqual({ message: 'Task deleted successfully' });
+      expect(service.deleteTask).toHaveBeenCalledWith('task456', '123');
+    });
+
+    it('should throw NotFoundException if task does not exist', async () => {
+      const req = { user: { userId: '123' }, params: { id: 'task456' } };
+
+      service.deleteTask.mockRejectedValue(
+        new NotFoundException('Task not found'),
+      );
+
+      await expect(controller.deleteTask(req)).rejects.toThrow(
+        NotFoundException,
+      );
+
+      expect(service.deleteTask).toHaveBeenCalledWith('task456', '123');
+    });
+
+    it('should throw InternalServerErrorException for generic errors', async () => {
+      const req = { user: { userId: '123' }, params: { id: 'task456' } };
+
+      service.deleteTask.mockRejectedValue(
+        new InternalServerErrorException('Failed to delete task'),
+      );
+
+      await expect(controller.deleteTask(req)).rejects.toThrow(
+        InternalServerErrorException,
+      );
+
+      expect(service.deleteTask).toHaveBeenCalledWith('task456', '123');
     });
   });
 });

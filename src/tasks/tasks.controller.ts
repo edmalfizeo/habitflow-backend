@@ -6,6 +6,7 @@ import {
   Req,
   Get,
   Patch,
+  Delete,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../common/guards/jwt/jwt.guard';
 import { TasksService } from './tasks.service';
@@ -51,5 +52,15 @@ export class TasksController {
 
     const task = await this.tasksService.updateTask(taskId, parsedData, userId);
     return { message: 'Task updated successfully', task };
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete(':id')
+  async deleteTask(@Req() req: any) {
+    const userId = req.user.userId;
+    const taskId = req.params.id;
+
+    await this.tasksService.deleteTask(taskId, userId);
+    return { message: 'Task deleted successfully' };
   }
 }

@@ -15,6 +15,7 @@ describe('TasksService', () => {
       findMany: jest.Mock<any, any>;
       findFirst: jest.Mock<any, any>;
       update: jest.Mock<any, any>;
+      delete: jest.Mock<any, any>;
     };
   };
 
@@ -25,6 +26,7 @@ describe('TasksService', () => {
         findMany: jest.fn(),
         findFirst: jest.fn(),
         update: jest.fn(),
+        delete: jest.fn(),
       },
     };
 
@@ -196,7 +198,7 @@ describe('TasksService', () => {
         deadline: '2024-12-31T23:59:59Z',
       };
 
-      prismaMock.task.findFirst.mockResolvedValue(null); // Simula que a tarefa não existe
+      prismaMock.task.findFirst.mockResolvedValue(null);
 
       await expect(
         service.updateTask(taskId, updateData, userId),
@@ -205,7 +207,7 @@ describe('TasksService', () => {
       expect(prismaMock.task.findFirst).toHaveBeenCalledWith({
         where: { id: taskId, userId },
       });
-      expect(prismaMock.task.update).not.toHaveBeenCalled(); // Não deve chamar update se a tarefa não existe
+      expect(prismaMock.task.update).not.toHaveBeenCalled();
     });
 
     it('should throw InternalServerErrorException if Prisma fails during update', async () => {
@@ -227,7 +229,7 @@ describe('TasksService', () => {
         userId,
       });
 
-      prismaMock.task.update.mockRejectedValue(new Error('Database error')); // Simula erro genérico no Prisma
+      prismaMock.task.update.mockRejectedValue(new Error('Database error'));
 
       await expect(
         service.updateTask(taskId, updateData, userId),
@@ -236,6 +238,76 @@ describe('TasksService', () => {
       expect(prismaMock.task.update).toHaveBeenCalledWith({
         where: { id: taskId },
         data: updateData,
+      });
+    });
+  });
+
+  describe('deleteTask', () => {
+    it('should delete a task successfully', async () => {
+      const taskId = 'task123';
+      const userId = 'user123';
+
+      prismaMock.task.findFirst.mockResolvedValue({
+        id: taskId,
+        title: 'Sample Task',
+        userId,
+      });
+
+      prismaMock.task.delete.mockResolvedValue({
+        id: taskId,
+        title: 'Sample Task',
+        userId,
+      });
+
+      const result = await service.deleteTask(taskId, userId);
+
+      expect(result).toEqual({
+        id: taskId,
+        title: 'Sample Task',
+        userId,
+      });
+      expect(prismaMock.task.findFirst).toHaveBeenCalledWith({
+        where: { id: taskId, userId },
+      });
+      expect(prismaMock.task.delete).toHaveBeenCalledWith({
+        where: { id: taskId },
+      });
+    });
+
+    it('should throw NotFoundException if task does not exist', async () => {
+      const taskId = 'task123';
+      const userId = 'user123';
+
+      prismaMock.task.findFirst.mockResolvedValue(null);
+
+      await expect(service.deleteTask(taskId, userId)).rejects.toThrow(
+        NotFoundException,
+      );
+
+      expect(prismaMock.task.findFirst).toHaveBeenCalledWith({
+        where: { id: taskId, userId },
+      });
+      expect(prismaMock.task.delete).not.toHaveBeenCalled();
+    });
+
+    it('should throw InternalServerErrorException for Prisma errors during delete', async () => {
+      const taskId = 'task123';
+      const userId = 'user123';
+
+      prismaMock.task.findFirst.mockResolvedValue({
+        id: taskId,
+        title: 'Sample Task',
+        userId,
+      });
+
+      prismaMock.task.delete.mockRejectedValue(new Error('Database error'));
+
+      await expect(service.deleteTask(taskId, userId)).rejects.toThrow(
+        InternalServerErrorException,
+      );
+
+      expect(prismaMock.task.delete).toHaveBeenCalledWith({
+        where: { id: taskId },
       });
     });
   });
