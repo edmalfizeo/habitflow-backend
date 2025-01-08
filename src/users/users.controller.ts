@@ -16,7 +16,7 @@ import { JwtAuthGuard } from '../common/guards/jwt/jwt.guard';
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
-  @Post()
+  @Post('register')
   @HttpCode(201)
   async register(@Body() CreateUserDto: CreateUserDto) {
     const { email, password } = CreateUserDto;

@@ -1,5 +1,5 @@
 services:
-  postgres:
+  postgres_prod:
     image: bitnami/postgresql:latest
     container_name: habitflow-db
     restart: always
@@ -11,5 +11,15 @@ services:
       - POSTGRESQL_DATABASE=${POSTGRES_DB}
     volumes:
       - postgres_data:/bitnami/postgresql
+
+  postgres_test:
+    image: bitnami/postgresql:latest
+    container_name: postgres_test
+    ports:
+      - '5433:5432'
+    environment:
+      POSTGRESQL_USERNAME: ${TEST_POSTGRES_USER}
+      POSTGRESQL_PASSWORD: ${TEST_POSTGRES_PASSWORD}
+      POSTGRESQL_DATABASE: ${TEST_POSTGRES_DB}
 volumes:
   postgres_data:
