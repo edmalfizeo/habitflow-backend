@@ -8,25 +8,25 @@ describe('Tasks Module (e2e)', () => {
   let app: INestApplication;
   let prisma: PrismaService;
 
-  beforeAll(async () => {
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile();
+  describe('Tasks Module (E2E) - Positive cases', () => {
+    beforeAll(async () => {
+      const moduleFixture: TestingModule = await Test.createTestingModule({
+        imports: [AppModule],
+      }).compile();
 
-    app = moduleFixture.createNestApplication();
-    prisma = moduleFixture.get<PrismaService>(PrismaService);
-    await app.init();
+      app = moduleFixture.createNestApplication();
+      prisma = moduleFixture.get<PrismaService>(PrismaService);
+      await app.init();
 
-    await prisma.task.deleteMany();
-    await prisma.user.deleteMany();
-  });
+      await prisma.task.deleteMany();
+      await prisma.user.deleteMany();
+    });
 
-  afterAll(async () => {
-    await prisma.$disconnect();
-    await app.close();
-  });
+    afterAll(async () => {
+      await prisma.$disconnect();
+      await app.close();
+    });
 
-  describe('Positive cases', () => {
     it('/tasks (POST) - should create a task successfully', async () => {
       await request(app.getHttpServer()).post('/users/register').send({
         email: 'tasktest@example.com',
@@ -287,6 +287,19 @@ describe('Tasks Module (e2e)', () => {
   });
 
   describe('Tasks Module (E2E) - Negative Scenarios', () => {
+    beforeEach(async () => {
+      await prisma.task.deleteMany();
+      await prisma.user.deleteMany();
+    });
+
+    afterAll(async () => {
+      await prisma.task.deleteMany();
+      await prisma.user.deleteMany();
+
+      await prisma.$disconnect();
+      await app.close();
+    });
+
     // Teste: Criar tarefa sem autenticação
     it('/tasks (POST) - should return 401 if no token is provided', async () => {
       const response = await request(app.getHttpServer()).post('/tasks').send({
