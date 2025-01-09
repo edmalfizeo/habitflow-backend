@@ -7,6 +7,7 @@ import {
   Get,
   Patch,
   Delete,
+  BadRequestException,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../common/guards/jwt/jwt.guard';
 import { TasksService } from './tasks.service';
@@ -19,11 +20,21 @@ export class TasksController {
   @UseGuards(JwtAuthGuard)
   @Post()
   async createTask(@Req() req: any, @Body() body: any) {
-    const parsedData = createTaskSchema.parse(body);
-    const userId = req.user.userId;
+    try {
+      const parsedData = createTaskSchema.parse(body); // Validação com Zod
+      const userId = req.user.userId;
+      const task = await this.tasksService.create(parsedData, userId);
 
-    const task = await this.tasksService.create(parsedData, userId);
-    return { message: 'Task created successfully', task };
+      return {
+        message: 'Task created successfully',
+        task,
+      };
+    } catch (error) {
+      if (error.name === 'ZodError') {
+        throw new BadRequestException(error.errors); // Retorna erro 400 para validação falha
+      }
+      throw error; // Lança outros erros como estão
+    }
   }
 
   @UseGuards(JwtAuthGuard)

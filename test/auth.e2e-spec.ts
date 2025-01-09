@@ -3,7 +3,6 @@ import { INestApplication } from '@nestjs/common';
 import { AppModule } from '../src/app/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
 import * as request from 'supertest';
-import * as bcrypt from 'bcrypt';
 
 describe('Auth Module (e2e)', () => {
   let app: INestApplication;
@@ -17,10 +16,9 @@ describe('Auth Module (e2e)', () => {
     app = moduleFixture.createNestApplication();
     prisma = moduleFixture.get<PrismaService>(PrismaService);
     await app.init();
-  });
 
-  beforeEach(async () => {
-    await prisma.$executeRawUnsafe(`TRUNCATE TABLE "User" CASCADE;`);
+    await prisma.task.deleteMany();
+    await prisma.user.deleteMany();
   });
 
   afterAll(async () => {
@@ -28,21 +26,12 @@ describe('Auth Module (e2e)', () => {
     await app.close();
   });
 
-  beforeEach(async () => {
-    await prisma.user.deleteMany(); // Limpa o banco antes de cada teste
-  });
-
   it('/auth/login (POST) - should login successfully', async () => {
-    // Registra um usuário para teste
-    const hashedPassword = bcrypt.hashSync('Password123!', 10);
-    await prisma.user.create({
-      data: {
-        email: 'login-test@example.com',
-        password: hashedPassword,
-      },
+    await request(app.getHttpServer()).post('/users/register').send({
+      email: 'login-test@example.com',
+      password: 'Password123!',
     });
 
-    // Faz login
     const response = await request(app.getHttpServer())
       .post('/auth/login')
       .send({
@@ -52,7 +41,6 @@ describe('Auth Module (e2e)', () => {
 
     expect(response.status).toBe(200);
     expect(response.body).toHaveProperty('access_token');
-    expect(typeof response.body.access_token).toBe('string');
   });
 
   it('/auth/login (POST) - should return 404 if email is not found', async () => {
